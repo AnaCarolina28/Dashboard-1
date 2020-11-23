@@ -3,9 +3,7 @@ import dash_core_components as dcc
 import dash_html_components as html
 from dash.dependencies import Input, Output
 
-import plotly.offline as py
 import plotly.graph_objs as go
-import plotly.express as px
 import pandas as pd
 
 #Criação de listas que irão armazenar os dados
@@ -14,9 +12,8 @@ voos_domesticos = []
 voos_internacionais = []
 total_de_buscas_voos = []
 dados = open('Gráfico 1.csv', 'r') #Arquivo .CSV é colocado em uma lista
-for line in dados: #Leitura de linha por linha do arquivo
-    line = line.strip() #Separação uma linha de outra por meio do .STRIP
-    data, domes, inter, total = line.split(';')  #Sepação de cada elemento da linha em outras quatro variáveis
+for linha in dados: #Leitura de linha por linha do arquivo
+    data, domes, inter, total = linha.split(';')  #Sepação de cada elemento da linha em outras quatro variáveis
     datas_totais.append(data) #Adição da data de cada linha a lista
     voos_domesticos.append(domes) #Adição da porcentagem de domésticas de cada linha a lista
     voos_internacionais.append(inter) #Adição da porcentagem de internacionais de cada linha a lista
@@ -73,7 +70,6 @@ dados = open('dadosgrafico3.csv', 'r') #Leitura do arquivo .CSV que contém os d
 
 #Será lida linha por linha do arquivo
 for linha in dados: 
-    linha = linha.strip() #As linhas são quebradas através do .STRIP
     regiao, cidade, antes, depois = linha.split(',') #Cada elemento da lista separado por vírgula é separado por .SPLIT e armazenado em uma variável
     #Cada variável com o dado correspondente é armazenada em sua respectiva lista
     total_regioes.append(regiao)
@@ -100,6 +96,23 @@ def escolhe_regiao(regiao_escolhida): #Recebe como parâmetro "regiao_escolhida"
 
 
 df = pd.read_csv('Gráfico2(01.11).csv', encoding='UTF-8', sep=';')
+cidades = df['CIDADE'].unique()
+#Função que irá criar as linhas do gráfico caso sejam escolhidos no filtro mais de uma cidade
+def cria_linhas(cidade):
+    dados = df.values #O data frame é tranformado em um array(uma lista que armazena só um tipo de elemento, string, int float, etc. Além disso seu tamanho não pode ser modificado)
+    porcentagens = [] #Lista que armazenará as porcentagens filtradas
+    semanas = [] #Lista que armazenará as semanas filtradas
+    for dado in dados: #Serão lidas as listas detro do array(correspondentes as linhas do arquivo)
+        if dado[1] == cidade: #Se o dado[1] (posição da cidade), for igual a cidade escolhida como parâmetro...
+            semanas.append(dado[0]) #O dado correspondente a semana é guardado na lista correspondente
+            porcentagens.append(dado[2]) #O dado referente a porcentagem é guardado na lista correspondente
+    #Se cria a linha que será exibida no gráfico
+    linhas = go.Scatter(
+        x = semanas,
+        y = porcentagens,
+        name = cidade #A cidade escolhida como parâmetro será o nome da linha
+        )
+    return linhas
 
 #Configurações layout Dash
 external_stylesheets = ['https://bootswatch.com/4/lux/bootstrap.css']
@@ -108,22 +121,25 @@ cores = ['#f7f7f9', '#007bff', '#d9534f', '#f0ad4e', '#1a1a1a']
 app = dash.Dash(__name__, external_stylesheets=external_stylesheets)
 app.layout = html.Div([
     html.Nav([
+            #html.Img(src = app.get_asset_url('Rectangle.png')),
+           # html.Img(src = app.get_asset_url('Aero Trends.png')),
             html.H3(children = 'Variação na procura de viagens aéreas no Brasil Pandemia COVID19', className = "navbar-brand"),
-    ], className = "navbar navbar-expand-lg navbar-dark bg-primary"),
+            ], className = "navbar navbar-expand-lg navbar-dark bg-primary"),
     html.Div([
-    html.Div([html.H5('Sumário do produto')], className = "card-header"),
+    html.Div([html.H5('Descrição')], className = "card-header"),
     html.Div([
-        html.P(children ='Devido a pandemia da COVID-19, houve uma grande interrupção no mercado de viagens e turismo no Brasil, fazendo com que o setor de viagens áereas tivessem que alterar abruptamente suas fontes de recursos. Dito isso, nosso dashboard busca demonstrar de forma gráfica dados que podem ser úteispara tomadas de decisões nesse novo panorama da indústria. Tendo enfoque no total de buscas de voos domésticos e internacionais, em destinos com maior aumento nas buscas e na porcentagem de procura por região, nosso objetivo é atingir companhias aéreas,empresas de turismo e aplicativos de viagem de forma a demonstrar uma alternativa de otimização aseus recursos e estratégias.', className = "card-text")
+        html.P(children ='Devido a pandemia da COVID-19, houve uma grande interrupção no mercado de viagens e turismo no Brasil, fazendo com que o setor de viagens aéreas tivessem que alterar abruptamente suas fontes de recursos. Dito isso, nosso dashboard busca demonstrar de forma gráfica dados que podem ser úteis para tomadas de decisões nesse novo panorama da indústria. Tendo enfoque no total de buscas de voos domésticos e internacionais, em destinos com maior aumento nas buscas e na porcentagem de procura por região, nosso objetivo é atingir companhias aéreas, empresas de turismo e aplicativos de viagem de forma a demonstrar uma alternativa de otimização a seus recursos e estratégias.', className = "card-text")
     ], className = "card-body"),
     ], className = "card border-primary mb-3"),
     html.Div([
         html.Div([
-        dcc.Dropdown(
-            id = "filtro gráfico1",
-            options = [{'label': mes, 'value': mes}for mes in meses],
-            value = 'Total',
-            clearable = False,
-            ),
+            html.H4(
+                children = 'Variação na procura por vôos nacionais e internacionais'),
+            dcc.Dropdown(
+                id = "filtro gráfico1",
+                options = [{'label': mes, 'value': mes}for mes in meses],
+                value = 'Total',
+                clearable = False),
         ], className = 'dropdown-menu-sm-left'),
         dcc.Graph(
             id = "Gráfico1")
@@ -131,13 +147,13 @@ app.layout = html.Div([
     html.Br(),
     html.Div([
         html.H4(
-                children='As tendências de buscas de viagens durante a pandemia do COVID19'),
+                children='A procura por vôos no Brasil'),
             html.Label(['Escolha as cidades para comparar:'],
                     style={'font-weight': 'bold', 'color' : cores[4]}),
             dcc.Dropdown(id='cidades',
-                        options=[{'label': x, 'value': x}
-                                for x in df['CIDADE'].unique()],
-                        value=['Brasil'],
+                        options=[{'label': cidade, 'value': cidade}
+                                for cidade in cidades],
+                        value='Brasil',
                         multi=True,
                         disabled=False,
                         clearable=False,
@@ -147,6 +163,8 @@ app.layout = html.Div([
     ], className ="jumbotron"),
     html.Br(),
     html.Div([
+        html.H4(
+            children = 'A procura por voos nacionais antes e durante a Pandemia COVID19'),
         dcc.Dropdown(
             id = "filtro gráfico3",
             #Será criado uma opção de filtro para cada elemento das listas REGIOES('Nordeste', 'Sul'...)
@@ -174,10 +192,10 @@ def update_gráfico(filtro):
     #Criação das linhas do gráfico
     trace1 = go.Scatter(x = datas, #As datas são atribuídas ao eixo X 
                     y = domesticas, #As porcentagens de busca por voos domésticos são atribuídos ao eixo Y
-                    name = 'Domésticas', #Definido um nome a linha
+                    name = 'Nacionais', #Definido um nome a linha
                     text = datas, #Variável recebe os valores de X para exibição na função HOVER 
                     mode = 'lines', #É definido o tipo do gráfico
-                    line = dict(color = cores[1], width = 3), #Atribuido uma cor para a linha 'Domésticas'
+                    line = dict(color = '#1e3799', width = 3), #Atribuido uma cor para a linha 'Domésticas'
                     hovertemplate = '%{y}'.center(8) + '<br>'  + '%{text}' #São utilizados o as informações de Y e de X para vizualização do dado
                     )
 
@@ -186,7 +204,7 @@ def update_gráfico(filtro):
                     mode = 'lines',
                     name = 'Internacionais',
                     text = datas,
-                    line = dict(color = cores[2], width = 3),
+                    line = dict(color = '#e58e26', width = 3),
                     hovertemplate = '%{y}'.center(8) + '<br>'  + '%{text}'
                     )
 
@@ -195,7 +213,7 @@ def update_gráfico(filtro):
                     mode = 'lines',
                     name = 'Total de buscas',
                     text = datas,
-                    line = dict(color = cores[3], width = 3),                
+                    line = dict(color = '#6ab04c', width = 3),                
                     hovertemplate = '%{y}'.center(8) + '<br>'  + '%{text}'
     )
 
@@ -276,7 +294,7 @@ def update_gráfico(filtro):
 
     #Definição de uma legenda  no eixo Y para deixar claro a que se referem as informações
     annotations.append(dict(
-        xref = 'paper', x = -0.05, y = -80,
+        xref = 'paper', x = -0.07, y = -80,
         xanchor = 'right', yanchor = 'bottom',
         text ='<b>Porcentagem de busca por voos<b>',
         textangle = -90, #Inclinação do texto na vertical para melhor vizualização no eixo Y
@@ -284,19 +302,6 @@ def update_gráfico(filtro):
             family = 'Arial',
             size = 16,
             color = cores[4]
-        ),
-        showarrow = False 
-        ))
-
-    #Atribuição de um texto que dá a fonte dos dados
-    annotations.append(dict(
-        xref = 'paper', yref = 'paper', x = 0.5, y = -0.8,
-        xanchor = 'center', yanchor = 'top',
-        text = "Fonte: https://www.kayak.com.br/tendencias-viagens",
-        font = dict(
-            family = 'Arial',
-            size = 12,
-            color = 'Gray'
         ),
         showarrow = False 
         ))
@@ -309,20 +314,24 @@ def update_gráfico(filtro):
     [Input(component_id='cidades', component_property='value')]
 )
 def update_graph(cidades):
-    dff = df.loc[df['CIDADE'].isin(cidades)]
-    fig = px.line(data_frame=dff, x="DIA", y="PCTG",
-                  color='CIDADE')
-    fig.update_layout(title={'text': 'Comparação semanal dos principais destinos brasileiros:',
-                             'font': {'size': 20, 'color': cores[4]}, 'x': 0.5, 'xanchor': 'center'},
-                      xaxis = dict(
-                          title = dict(
-                            text = 'Semanas',
+    gráfico = [] #Lista que irá armazenar as linhas do gráfico
+    if type(cidades) == list: #Caso a opção de filtro escolhida for mais de uma cidade, o parâmetro será uma lista e o 'if' será executado
+        for cidade in cidades: #Como são duas cidades ou mais, será lido elemento por elemento da lista
+            gráfico.append(cria_linhas(cidade)) #Cada uma das cidades será colocada como parâmetro da função 'cria_linhas', anteriormente apresentada
+    else: #Caso a opção de filtro escolhida for uma cidade apenas o comando 'else' é executado 
+        gráfico.append(cria_linhas(cidades)) #Será criada apenas uma linha com a função 'cria_linhas'
+
+    fig = go.Figure(gráfico) #Todas as linhas do gráfico (seja uma ou mais linhas) guardadas na lista 'gráfico' são tranformados em um objeto para serem exibidas como o gráfico em si
+    fig.update_layout(xaxis = dict(
+                        title = dict(
+                            text = '<b>Semanas<b>',
                             font = dict(color = cores[4])),
-                          tickfont = dict(color = cores[4])),
-                      yaxis= dict(
-                          linecolor = cores[4],
-                          title = dict(
-                            text = 'Mudanças no interesse pelas buscas de voos (%)',
+                        tickfont = dict(color = cores[4])),
+                    yaxis= dict(
+                        linecolor = cores[4],
+                        ticksuffix = '%',
+                        title = dict(
+                            text = '<b>Porcentagem da busca por voos (%)<b>',
                             font = dict(color = cores[4])),
                           tickfont = dict(color = cores[4])),
                       yaxis_zeroline = False,
@@ -346,24 +355,26 @@ def upgrade_graph(filtro):
     media2 = dados[2]
     trace1 = go.Bar(x = cidades,
                     y = media1,
-                    name = 'Antes da Pandemia/ semana do dia 16 de fevereiro',
-                    marker = {'color': '#6A5ACD'})
+                    name = 'Antes da Pandemia',
+                    marker = {'color': '#40407a'})
     trace2 = go.Bar(x = cidades,
                     y = media2,
-                    name = 'Durante a Pandemia/ semana do dia 13 se Setembro',
-                    marker = {'color': '#00BFFF'})
+                    name = 'Durante a Pandemia',
+                    marker = {'color': '#cc8e35'})
     data = [trace1, trace2]
     layout = go.Layout(title = dict(
-        text = '% De procura de vôos por região',
         font = dict(color = cores[4])),
                    plot_bgcolor = cores[0],
                    paper_bgcolor = cores[0],
                    legend = dict(font = dict(color = cores[4])),
                    yaxis=dict(
                        linecolor = cores[4],
+                       gridcolor = cores[4],
+                       zeroline = False,
                        tickfont = dict(color = cores[4]),
+                       ticksuffix = '%',
                        title = dict(
-                           text = '<b>% De procura de vôos<b>',
+                           text = '<b> Porcentagem de procura por vôos (%)<b>',
                            font = dict(color = cores[4]))),
                    xaxis=dict(
                        tickfont = dict(color = cores[4]),
